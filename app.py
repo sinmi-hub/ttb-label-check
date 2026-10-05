@@ -201,7 +201,6 @@ def render_single_tab() -> None:
             "field. Click **Check label**. The app reads the label and shows whether each "
             "field matches, number for number and word for word."
         )
-    st.caption("Sample label photos are in the project's `samples/` folder, if you want to try the app first.")
 
     uploaded_image = st.file_uploader("Label image", type=["png", "jpg", "jpeg", "webp"], key="single_image")
     if uploaded_image is not None:
@@ -282,7 +281,6 @@ def render_batch_tab() -> None:
             "The app matches each row to its image by file name. Click **Check all labels** "
             "to read and compare every label at once, then download the results."
         )
-    st.caption("A sample spreadsheet and label photos are in the project's `samples/` folder, if you want to try the app first.")
 
     csv_file = st.file_uploader("Application spreadsheet (CSV)", type=["csv"], key="batch_csv")
     image_files = st.file_uploader(
