@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import io
 import logging
+import threading
 import time
 
 import anthropic
@@ -58,6 +59,23 @@ def _get_client() -> anthropic.Anthropic:
             max_retries=MAX_RETRIES,
         )
     return _client
+
+
+def warm_up() -> None:
+    """Open the connection to the API ahead of the first label check.
+
+    The first request otherwise pays for the TLS handshake and connection setup
+    (seen as roughly 11 s versus 4 s afterwards). A cheap model lookup in a
+    background thread does that work while the agent is still filling the form.
+    """
+
+    def _ping() -> None:
+        try:
+            _get_client().models.retrieve(MODEL)
+        except Exception:  # best effort only; the first real check will connect instead
+            logger.info("Warm-up request failed")
+
+    threading.Thread(target=_ping, daemon=True).start()
 
 
 def _downscale(image_bytes: bytes, media_type: str) -> tuple[bytes, str]:
