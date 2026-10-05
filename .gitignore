@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+.pytest_cache/
+.streamlit/secrets.toml
+# AI tooling and private notes stay out of the public repo
+.claude/
+CLAUDE.md
+AGENTS.md
+.codex/
