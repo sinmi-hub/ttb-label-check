@@ -1,6 +1,6 @@
 # TTB Label Check
 
-**Live app:** https://ttb-label-check.streamlit.app · **Project page:** https://sinmi-hub.github.io/ttb-label-check/
+**Live app:** https://ttb-label-check-dot.streamlit.app · **Project page:** https://sinmi-hub.github.io/ttb-label-check/
 
 ## What it does
 
