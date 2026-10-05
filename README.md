@@ -1,5 +1,7 @@
 # TTB Label Check
 
+**Live app:** https://ttb-label-check.onrender.com · **Project page:** https://sinmi-hub.github.io/ttb-label-check/
+
 ## What it does
 
 TTB Label Check helps a compliance agent check whether an alcohol label matches its application. The agent uploads a photo of the label and enters what the application says. The app shows, field by field, whether the label matches:
@@ -32,7 +34,8 @@ flowchart LR
 
 ## Infrastructure
 
-- **App:** Python with Streamlit, hosted on Render.
+- **App:** Python with Streamlit, hosted on Render (always-on plan, so there is no cold start).
+- **Project page:** a static page on GitHub Pages that links to the app.
 - **Label reading:** Anthropic's Claude API. The API key is stored as an environment variable on the host and never in the code.
 - **Storage:** none. Images and results are kept only for the current session.
 
