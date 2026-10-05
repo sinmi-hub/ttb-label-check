@@ -20,8 +20,7 @@ MAX_LONG_SIDE = 1568
 REQUEST_TIMEOUT_SECONDS = 30.0
 MAX_RETRIES = 2
 
-# Betas required for the server-side refusal-fallback "default" form (scalar,
-# not the array form, which uses a different header - see model-migration.md).
+# If the model declines a request, the API retries it on a fallback model.
 _FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 ALLOWED_MEDIA_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
