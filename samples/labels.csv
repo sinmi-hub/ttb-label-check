@@ -1,0 +1,9 @@
+image,brand_name,class_type,alcohol_content,net_contents,bottler_name_address,country_of_origin,expected_overall
+01_old_tom_match.png,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Match
+02_stones_throw_case.png,Stone's Throw,Small Batch Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Stone's Throw Distilling Co., Louisville, KY",,Match
+03_wrong_abv.png,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Mismatch
+04_titlecase_warning.png,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Mismatch
+05_not_bold_warning.png,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Mismatch
+06_reworded_warning.png,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Mismatch
+07_import_wine.png,Chateau Marelle,Red Wine,13.5% Alc./Vol.,750 mL,"Imported by Marelle Imports, New York, NY",Product of France,Match
+08_angled_glare.png,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Bottled by Old Tom Distillery, Bardstown, KY",,Match
