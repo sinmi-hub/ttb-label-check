@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ttb-label-check
+    runtime: python
+    plan: starter
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: uv run --no-dev streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12"
