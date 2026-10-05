@@ -198,10 +198,10 @@ def _compare_alcohol_content(expected: str, found: str) -> FieldResult:
             expected=expected,
             found=found,
             verdict=Verdict.REVIEW,
-            reason=f"The stated proof ({found_proof}) doesn't match twice the ABV ({found_abv}%).",
+            reason=f"The stated proof ({found_proof}) doesn't match twice the alcohol percentage ({found_abv}%).",
         )
 
-    return FieldResult(field=field, expected=expected, found=found, verdict=Verdict.MATCH, reason="ABV matches the application.")
+    return FieldResult(field=field, expected=expected, found=found, verdict=Verdict.MATCH, reason="Alcohol content matches the application.")
 
 
 def _compare_net_contents(expected: str, found: str) -> FieldResult:

@@ -12,6 +12,7 @@ decisions (reading the label, comparing fields) live in labelcheck/.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import os
 import time
@@ -20,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 import streamlit as st
 
-from labelcheck.models import ApplicationFields, Verdict
+from labelcheck.models import ApplicationFields, LabelReading, Verdict
 from labelcheck.reader import ReadError, read_label, warm_up
 from labelcheck.rules import compare, overall
 
@@ -167,7 +168,37 @@ def build_results_csv(batch_results: list[dict]) -> bytes:
 # ---------------------------------------------------------------------------
 
 
+LABEL_PANEL_FIELDS = {
+    "brand_name": "Brand name",
+    "class_type": "Class/type",
+    "alcohol_content": "Alcohol content",
+    "net_contents": "Net contents",
+    "bottler_name_address": "Bottler name and address",
+    "country_of_origin": "Country of origin",
+    "warning_text": "Government warning",
+}
+
+
+def render_label_panel(reading: LabelReading) -> None:
+    """Show what the AI read, so the agent can spot a misread before trusting the result."""
+    st.subheader("What the label says")
+    rows = [
+        {"Field": label, "Read from label": getattr(reading, key) or "(not found)"}
+        for key, label in LABEL_PANEL_FIELDS.items()
+    ]
+    rows.append({"Field": "Warning heading in capitals", "Read from label": _yes_no(reading.warning_heading_all_caps)})
+    rows.append({"Field": "Warning heading in bold", "Read from label": _yes_no(reading.warning_heading_bold)})
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+    if reading.image_quality_note:
+        st.info(f"Image quality note: {reading.image_quality_note}")
+
+
+def _yes_no(value: bool | None) -> str:
+    return "Not sure" if value is None else ("Yes" if value else "No")
+
+
 def render_single_result(result: dict) -> None:
+    st.subheader("Result")
     verdict = result["verdict"]
     if verdict == Verdict.MATCH:
         st.success("Match: the label matches the application.")
@@ -176,78 +207,97 @@ def render_single_result(result: dict) -> None:
     else:
         st.warning("Needs review: some fields could not be confirmed.")
 
-    reading = result["reading"]
-    if reading.image_quality_note:
-        st.info(f"Image quality note: {reading.image_quality_note}")
-
-    table_rows = [
-        {
-            "Field": r.field,
-            "Application says": r.expected,
-            "Label says": r.found or "(not found)",
-            "Result": r.verdict.value,
-            "Why": r.reason,
-        }
-        for r in result["results"]
-    ]
+    # The label values are already in the panel above and the application values
+    # in the form, so this table sticks to the verdict and the reason.
+    table_rows = [{"Field": r.field, "Result": r.verdict.value, "Why": r.reason} for r in result["results"]]
     st.dataframe(table_rows, use_container_width=True, hide_index=True)
-    st.caption(f"Checked in {result['elapsed']:.1f} seconds.")
+
+
+def _read_uploaded_label(uploaded_image) -> LabelReading | None:
+    """Read the label once per uploaded file and keep the result for this session.
+
+    Reading starts as soon as the image is uploaded, so it usually finishes while
+    the agent is still typing the application details.
+    """
+    image_bytes = uploaded_image.getvalue()
+    key = hashlib.sha256(image_bytes).hexdigest()
+    cache = st.session_state.setdefault("label_readings", {})
+    if key not in cache:
+        media_type = getattr(uploaded_image, "type", None) or guess_media_type(uploaded_image.name)
+        start = time.monotonic()
+        with st.spinner("Reading the label..."):
+            try:
+                cache[key] = (read_label(image_bytes, media_type), time.monotonic() - start)
+            except ReadError as exc:
+                st.error(str(exc))
+                return None
+    reading, elapsed = cache[key]
+    st.caption(f"Label read in {elapsed:.1f} seconds.")
+    return reading
 
 
 def render_single_tab() -> None:
     with st.expander("How to use"):
         st.write(
-            "Upload a photo of the label, then type in what the application says for each "
-            "field. Click **Check label**. The app reads the label and shows whether each "
-            "field matches, number for number and word for word."
+            "Upload a photo of the label. The app reads it right away and shows what it found. "
+            "Type in what the application says for each field, then click **Check label** to "
+            "see whether each field matches, number for number and word for word."
         )
 
-    uploaded_image = st.file_uploader("Label image", type=["png", "jpg", "jpeg", "webp"], key="single_image")
-    if uploaded_image is not None:
-        st.image(uploaded_image, caption="Uploaded label", width=300)
+    left, right = st.columns(2, gap="large")
 
-    with st.form("single_label_form"):
-        brand_name = st.text_input("Brand name", key="single_brand_name")
-        class_type = st.text_input("Class/type", key="single_class_type")
-        alcohol_content = st.text_input("Alcohol content", key="single_alcohol_content")
-        net_contents = st.text_input("Net contents", key="single_net_contents")
-        bottler_name_address = st.text_input("Bottler name and address (optional)", key="single_bottler")
-        country_of_origin = st.text_input("Country of origin (optional, imports only)", key="single_country")
-        submitted = st.form_submit_button("Check label", type="primary", use_container_width=True)
+    with left:
+        uploaded_image = st.file_uploader("Label image", type=["png", "jpg", "jpeg", "webp"], key="single_image")
+        if uploaded_image is not None:
+            st.image(uploaded_image, caption="Uploaded label", width=260)
 
-    if submitted:
-        form_values = {
-            "brand_name": brand_name,
-            "class_type": class_type,
-            "alcohol_content": alcohol_content,
-            "net_contents": net_contents,
-        }
-        image_bytes = uploaded_image.getvalue() if uploaded_image is not None else None
-        errors = validate_single_inputs(form_values, image_bytes)
-        if errors:
+        with st.form("single_label_form"):
+            brand_name = st.text_input("Brand name", key="single_brand_name")
+            class_type = st.text_input("Class/type", key="single_class_type")
+            alcohol_content = st.text_input("Alcohol content", key="single_alcohol_content")
+            net_contents = st.text_input("Net contents", key="single_net_contents")
+            bottler_name_address = st.text_input("Bottler name and address (optional)", key="single_bottler")
+            country_of_origin = st.text_input("Country of origin (optional, imports only)", key="single_country")
+            submitted = st.form_submit_button("Check label", type="primary", use_container_width=True)
+
+    with right:
+        reading = _read_uploaded_label(uploaded_image) if uploaded_image is not None else None
+        if reading is not None:
+            render_label_panel(reading)
+        elif uploaded_image is None:
+            st.info("Upload a label image to see what the label says.")
+
+        if submitted:
+            form_values = {
+                "brand_name": brand_name,
+                "class_type": class_type,
+                "alcohol_content": alcohol_content,
+                "net_contents": net_contents,
+            }
+            image_bytes = uploaded_image.getvalue() if uploaded_image is not None else None
+            errors = validate_single_inputs(form_values, image_bytes)
             st.session_state["single_result"] = None
-            for message in errors:
-                st.error(message)
-        else:
-            application = ApplicationFields(
-                brand_name=brand_name.strip(),
-                class_type=class_type.strip(),
-                alcohol_content=alcohol_content.strip(),
-                net_contents=net_contents.strip(),
-                bottler_name_address=bottler_name_address.strip(),
-                country_of_origin=country_of_origin.strip(),
-            )
-            media_type = getattr(uploaded_image, "type", None) or guess_media_type(uploaded_image.name)
-            with st.spinner("Reading the label..."):
-                try:
-                    st.session_state["single_result"] = check_one(application, image_bytes, media_type)
-                except ReadError as exc:
-                    st.session_state["single_result"] = None
-                    st.error(str(exc))
+            if errors:
+                for message in errors:
+                    st.error(message)
+            elif reading is not None:
+                application = ApplicationFields(
+                    brand_name=brand_name.strip(),
+                    class_type=class_type.strip(),
+                    alcohol_content=alcohol_content.strip(),
+                    net_contents=net_contents.strip(),
+                    bottler_name_address=bottler_name_address.strip(),
+                    country_of_origin=country_of_origin.strip(),
+                )
+                result = check_one(application, image_bytes, "", reader=lambda *_: reading)
+                result["image_key"] = hashlib.sha256(image_bytes).hexdigest()
+                st.session_state["single_result"] = result
 
-    result = st.session_state.get("single_result")
-    if result:
-        render_single_result(result)
+        # Only show a result that belongs to the image currently uploaded.
+        result = st.session_state.get("single_result")
+        current_key = hashlib.sha256(uploaded_image.getvalue()).hexdigest() if uploaded_image else None
+        if result and result.get("image_key") == current_key:
+            render_single_result(result)
 
 
 def render_batch_results(batch_results: list[dict]) -> None:
