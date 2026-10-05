@@ -56,3 +56,12 @@ uv run pytest
 ```
 
 Sample labels and a matching batch spreadsheet are in `samples/`.
+
+## Approach and trade-offs
+
+- **AI reads, rules decide.** A vision model only transcribes the label. Plain, tested code makes every match decision, so results are consistent and explainable.
+- **Speed.** The label is read as soon as it's uploaded (about 4 seconds), usually while the agent is still typing, so Check label is instant.
+- **Judgment where it's safe.** Names ignore case and punctuation; numbers are compared as numbers; the government warning stays strict. Anything uncertain is marked Needs review, not guessed.
+- **Trade-off: outside AI service.** TTB's network blocks many outside services. This prototype calls Anthropic's API; in production the reading step could move to an approved or self-hosted model without changing the rules or screens.
+- **Trade-off: bold detection.** Whether the heading is bold is the model's visual judgment, so it's less certain than the text checks.
+- **Assumptions.** Application details are typed in or uploaded as a spreadsheet (no COLA integration, as requested). Nothing is stored.
