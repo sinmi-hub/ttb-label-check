@@ -325,8 +325,24 @@ def _warm_up_once() -> bool:
     return True
 
 
+def _load_api_key() -> None:
+    """Use the key from Streamlit's secrets settings when it isn't already in the environment."""
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return
+    try:
+        key = st.secrets.get("ANTHROPIC_API_KEY")
+    except FileNotFoundError:  # no secrets file when running locally
+        key = None
+    if key:
+        os.environ["ANTHROPIC_API_KEY"] = key
+
+
 def main() -> None:
     st.set_page_config(page_title="TTB Label Check", page_icon=":label:", layout="wide")
+    _load_api_key()
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        st.error("The app isn't set up yet: no API key is configured. Add ANTHROPIC_API_KEY in the app's secrets settings.")
+        st.stop()
     _warm_up_once()
     st.title("TTB Label Check")
     st.write("This app checks whether an alcohol label matches its application, field by field.")

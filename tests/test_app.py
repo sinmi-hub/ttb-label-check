@@ -193,7 +193,14 @@ def test_build_results_csv_has_expected_header():
 # ---------------------------------------------------------------------------
 
 
-def test_single_tab_shows_validation_message_when_fields_and_image_missing(monkeypatch):
+@pytest.fixture
+def fake_key(monkeypatch):
+    # The app stops with a setup message when no key is configured.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setattr("labelcheck.reader.warm_up", lambda: None)
+
+
+def test_single_tab_shows_validation_message_when_fields_and_image_missing(fake_key):
     at = AppTest.from_file(APP_PATH)
     at.run()
 
@@ -207,8 +214,16 @@ def test_single_tab_shows_validation_message_when_fields_and_image_missing(monke
     assert any("upload a label image" in e for e in errors)
 
 
-def test_single_tab_runs_without_exception():
+def test_single_tab_runs_without_exception(fake_key):
     at = AppTest.from_file(APP_PATH)
     at.run()
 
     assert not at.exception
+
+
+def test_app_explains_missing_api_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    at = AppTest.from_file(APP_PATH)
+    at.run()
+
+    assert any("no API key is configured" in e.value for e in at.error)
